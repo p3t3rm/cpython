@@ -1,3 +1,47 @@
+Experimental Python 3 support for calling print and exec without parentheses
+============================================================================
+
+This cpython fork implements support for calling print and exec without using
+parentheses. 
+
+You can still use parentheses if you want. It is completely optional.
+
+Examples
+--------
+
+>>> print 'Hello World!'
+Hello World!
+
+>>> print 3 + 7, 9, sep=' -- '
+10 -- 9
+
+>>> print 'The number is', -1
+The number is -1
+
+>>> exec "print 'From exec'"
+From exec
+
+
+Gotchas
+-------
+
+>>> print -1
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+TypeError: unsupported operand type(s) for -: 'builtin_function_or_method' and 'int'
+
+print -1 is the same as print - 1 which is subtraction, just as print+1 is addition.
+Simply use parentheses is this case
+
+>>> print(-1)
+-1
+
+
+For build instructions see below.
+
+
+
+
 This is Python version 3.7.0 alpha 1
 ====================================
 

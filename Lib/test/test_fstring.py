@@ -539,7 +539,7 @@ f'{a * x()}'"""
         self.assertEqual(f'{f"{y}"*3}', '555')
 
     def test_invalid_string_prefixes(self):
-        self.assertAllRaise(SyntaxError, 'unexpected EOF while parsing',
+        self.assertAllRaise(SyntaxError, 'invalid syntax',
                             ["fu''",
                              "uf''",
                              "Fu''",

@@ -29,9 +29,9 @@ class MiscSourceEncodingTest(unittest.TestCase):
 
     def test_issue2301(self):
         try:
-            compile(b"# coding: cp932\nprint '\x94\x4e'", "dummy", "exec")
+            compile(b"# coding: cp932\nprint '\x94\x4e' 1", "dummy", "exec")
         except SyntaxError as v:
-            self.assertEqual(v.text, "print '\u5e74'\n")
+            self.assertEqual(v.text, "print '\u5e74' 1\n")
         else:
             self.fail()
 

@@ -2534,8 +2534,9 @@ static expr_ty
 ast_for_expr(struct compiling *c, const node *n)
 {
     /* handle the full range of simple expressions
-       test: or_test ['if' or_test 'else' test] | lambdef
-       test_nocond: or_test | lambdef_nocond
+       test: or_test (['if' or_test 'else' test] | testarglist) | lambdef
+       test_nocond: or_test [testarglist] | lambdef_nocond
+       test_noarglist: or_test ['if' or_test 'else' test] | lambdef
        or_test: and_test ('or' and_test)*
        and_test: not_test ('and' not_test)*
        not_test: 'not' not_test | comparison
@@ -2559,9 +2560,30 @@ ast_for_expr(struct compiling *c, const node *n)
     switch (TYPE(n)) {
         case test:
         case test_nocond:
+        case test_noarglist:
             if (TYPE(CHILD(n, 0)) == lambdef ||
                 TYPE(CHILD(n, 0)) == lambdef_nocond)
                 return ast_for_lambdef(c, CHILD(n, 0));
+            else if (NCH(n) == 2) {
+                node *an = CHILD(n, 0);
+                while (TYPE(an) != atom_expr && NCH(an) == 1)
+                    an = CHILD(an, 0);
+                if (TYPE(an) == atom_expr) {
+                    int allow_noparens_call = 0;
+                    node *nn = CHILD(an, 0);
+                    while (TYPE(nn) != NAME && NCH(nn) == 1)
+                        nn = CHILD(nn, 0);
+                    if (TYPE(nn) == NAME && !allow_noparens_call)
+                        allow_noparens_call = strcmp(STR(nn), "print") == 0 
+                                           || strcmp(STR(nn), "exec") == 0;
+                    if (allow_noparens_call) {
+                        expr_ty e = ast_for_expr(c, CHILD(n, 0));
+                        return ast_for_call(c, CHILD(n, 1), e);
+                    }
+                }
+                ast_error(c, CHILD(n, 1), "invalid syntax");
+                return NULL;
+            }
             else if (NCH(n) > 1)
                 return ast_for_ifexpr(c, n);
             /* Fallthrough */
@@ -2701,6 +2723,8 @@ ast_for_call(struct compiling *c, const node *n, expr_ty func)
     /*
       arglist: argument (',' argument)*  [',']
       argument: ( test [comp_for] | '*' test | test '=' test | '**' test )
+      testarglist: testargument (',' testargument)*  [',']
+      testargument: ( test_noarglist [comp_for] | '*' test_noarglist | test_noarglist '=' test_noarglist | '**' test_noarglist )
     */
 
     int i, nargs, nkeywords, ngens;
@@ -2708,14 +2732,15 @@ ast_for_call(struct compiling *c, const node *n, expr_ty func)
     asdl_seq *args;
     asdl_seq *keywords;
 
-    REQ(n, arglist);
+    if (!(TYPE(n) == arglist || TYPE(n) == testarglist))
+        REQ(n, arglist);
 
     nargs = 0;
     nkeywords = 0;
     ngens = 0;
     for (i = 0; i < NCH(n); i++) {
         node *ch = CHILD(n, i);
-        if (TYPE(ch) == argument) {
+        if (TYPE(ch) == argument || TYPE(ch) == testargument) {
             if (NCH(ch) == 1)
                 nargs++;
             else if (TYPE(CHILD(ch, 1)) == comp_for)
@@ -2745,7 +2770,7 @@ ast_for_call(struct compiling *c, const node *n, expr_ty func)
     ndoublestars = 0;  /* just keyword argument unpackings */
     for (i = 0; i < NCH(n); i++) {
         node *ch = CHILD(n, i);
-        if (TYPE(ch) == argument) {
+        if (TYPE(ch) == argument || TYPE(ch) == testargument) {
             expr_ty e;
             node *chch = CHILD(ch, 0);
             if (NCH(ch) == 1) {

@@ -73,26 +73,6 @@ class FutureTest(unittest.TestCase):
             from test import badsyntax_future10
         self.check_syntax_error(cm.exception, "badsyntax_future10", 3, 0)
 
-    def test_parserhack(self):
-        # test that the parser.c::future_hack function works as expected
-        # Note: although this test must pass, it's not testing the original
-        #       bug as of 2.6 since the with statement is not optional and
-        #       the parser hack disabled. If a new keyword is introduced in
-        #       2.6, change this to refer to the new future import.
-        try:
-            exec("from __future__ import print_function; print 0")
-        except SyntaxError:
-            pass
-        else:
-            self.fail("syntax error didn't occur")
-
-        try:
-            exec("from __future__ import (print_function); print 0")
-        except SyntaxError:
-            pass
-        else:
-            self.fail("syntax error didn't occur")
-
     def test_multiple_features(self):
         with support.CleanImport("test.test_future5"):
             from test import test_future5
